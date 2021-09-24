@@ -51,16 +51,18 @@ fn check_pregenerated_bindings() {
 
     warn!("using pre-generated bindings - these are not guaranteed to always work (!!!)");
 
-    let os = std::env::consts::OS;
-    let arch = std::env::consts::ARCH;
-    let subdir = format!("{}-{}", os, arch);
+    let target_os =
+        std::env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS is set by cargo.");
+    let target_arch =
+        std::env::var("CARGO_CFG_TARGET_ARCH").expect("CARGO_CFG_TARGET_ARCH is set by cargo.");
+    let subdir = format!("{}-{}", target_os, target_arch);
     let bindings_dir = Path::new("bindings").join(subdir);
 
     if !bindings_dir.is_dir() {
         panic!(
             "bindings for {}-{} do not exist in `{}`, please enable the `bindgen` feature instead",
-            os,
-            arch,
+            target_os,
+            target_arch,
             bindings_dir.display()
         );
     }
@@ -100,6 +102,12 @@ fn generate_bindings() {
         .whitelist_type("ma_.*")
         .whitelist_function("ma_.*")
         .whitelist_var("(ma|MA)_.*")
+        // Make sure MA_API functions are not hidden.
+        // See https://github.com/rusqlite/rusqlite/pull/915 for another example.
+        .clang_arg("-DMA_API=__attribute__ ((visibility(\"default\")))")
+        // Explicitly set target in case we are cross-compiling.
+        // See https://github.com/rust-lang/rust-bindgen/issues/1780 for context.
+        .clang_arg(format!("--target={}", std::env::var("TARGET").unwrap()))
         // We just use one big generated header created by concatenating what we need.
         .header(header)
         .size_t_is_usize(true)
@@ -265,7 +273,6 @@ fn emit_supported_features() {
         }
     };
 
-    // NOTE: the cfg! macro doesn't work when cross-compiling, it would return values for the host
     let target_os =
         std::env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS is set by cargo.");
     let target_family =
