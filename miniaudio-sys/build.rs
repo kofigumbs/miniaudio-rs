@@ -99,9 +99,9 @@ fn generate_bindings() {
 
     let bindings = bindgen::Builder::default()
         // Make sure to only whitelist miniaudio's API.
-        .whitelist_type("ma_.*")
-        .whitelist_function("ma_.*")
-        .whitelist_var("(ma|MA)_.*")
+        .allowlist_type("ma_.*")
+        .allowlist_function("ma_.*")
+        .allowlist_var("(ma|MA)_.*")
         // Make sure MA_API functions are not hidden.
         // See https://github.com/rusqlite/rusqlite/pull/915 for another example.
         .clang_arg("-DMA_API=__attribute__ ((visibility(\"default\")))")
